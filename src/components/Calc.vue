@@ -4,24 +4,31 @@
         <input v-model.number="condition" type="number" class="calc-window" />
         <operations :first-operand="state.operand" :operation="state.type" :second-operand="state.secondOperand" :result="state.result"/>
         <div class="history">
-            <button class="show">Show history</button>
+            <button class="show" @click="showHistory">
+                {{this.state.showHistory ? 'Hide history' : 'Show history'}}
+            </button>
         </div>
-        <div class="calc-btns">
-            <div class="calc-numbers">
-                <div
-                     class="calc-number__item"
-                     v-for="item in numbers"  v-bind:key="item.value"
-                     :class="item.value === 0 ? 'zero' : ''"
-                     v-on:click="addNumber(item.value)">
-                    {{item.title}}
+        <div v-if="this.state.showHistory">
+            <History />
+        </div>
+        <div v-else>
+            <div class="calc-btns">
+                <div class="calc-numbers">
+                    <div
+                         class="calc-number__item"
+                         v-for="item in numbers"  v-bind:key="item.value"
+                         :class="item.value === 0 ? 'zero' : ''"
+                         v-on:click="addNumber(item.value)">
+                        {{item.title}}
+                    </div>
                 </div>
-            </div>
-            <div class="calc-actions">
-                <div class="calc-action__item clear" @click="clear">C</div>
-                <div class="calc-action__item" v-for="item in operations" v-bind:key="item.title" @click="operation(item.title)">
-                    {{item.title}}
+                <div class="calc-actions">
+                    <div class="calc-action__item clear" @click="clear">C</div>
+                    <div class="calc-action__item" v-for="item in operations" v-bind:key="item.title" @click="operation(item.title)">
+                        {{item.title}}
+                    </div>
+                    <div class="calc-action__item equal" @click="execute">=</div>
                 </div>
-                <div class="calc-action__item equal" @click="execute">=</div>
             </div>
         </div>
     </div>
@@ -29,26 +36,45 @@
 
 <script>
     import operations from './operations';
+    import History from './History';
     export default {
         name: "Calc",
         props: {
             title: String
         },
         components: {
-            operations
+            operations,
+            History
         },
         methods: {
             addNumber: function (key) {
                 let value = this.condition.toString() + key.toString();
-                this.condition = parseInt(value, 10);
+                if (this.state.result) {
+                    this.state.operand = this.condition;
+                }
+                if (!this.state.result) {
+                    this.condition = parseInt(value, 10);
+                } else {
+                    this.condition = value;
+                }
             },
             clear: function () {
                 this.condition = '';
+                this.state.secondOperand = null;
+                this.state.operand = null;
+                this.state.type = null;
+                this.state.result = null;
             },
             operation: function (type) {
-                this.state.operand = this.condition;
-                if (!this.state.operand) this.state.operand = this.state.result;
                 this.state.type = type;
+                this.state.operand = this.condition;
+
+                if (!this.state.operand) this.state.operand = this.state.result;
+
+                if (this.state.result) {
+                    this.condition = this.state.result;
+                    this.state.result = null;
+                }
                 this.condition = '';
             },
             execute: function () {
@@ -68,7 +94,18 @@
                         break;
                     default: break;
                 }
+
+                this.state.history.push({
+                    first: this.state.operand,
+                    second: this.state.secondOperand,
+                    operation: this.state.type,
+                    result: this.state.result
+                });
+                localStorage.setItem('logs', JSON.stringify(this.state.history));
                 this.condition = '';
+            },
+            showHistory: function() {
+                this.state.showHistory = !this.state.showHistory;
             }
         },
         data: () => {
@@ -77,28 +114,30 @@
                     operand: null,
                     type: null,
                     secondOperand: null,
-                    result: null
+                    result: null,
+                    history: JSON.parse(localStorage.getItem('logs')),
+                    showHistory: false
                 },
                 numbers:
                     [
-                        { title: '1', value: 1},
-                        { title: '2', value: 2},
-                        { title: '3', value: 3},
-                        { title: '4', value: 4},
-                        { title: '5', value: 5},
-                        { title: '6', value: 6},
-                        { title: '7', value: 7},
-                        { title: '8', value: 8},
-                        { title: '9', value: 9},
-                        { title: '0', value: 0},
+                        { title: '1', value: 1 },
+                        { title: '2', value: 2 },
+                        { title: '3', value: 3 },
+                        { title: '4', value: 4 },
+                        { title: '5', value: 5 },
+                        { title: '6', value: 6 },
+                        { title: '7', value: 7 },
+                        { title: '8', value: 8 },
+                        { title: '9', value: 9 },
+                        { title: '0', value: 0 },
                         { title: '.', value: '.'},
                     ],
                 operations:
                     [
-                        { title: '+'},
-                        { title: '-'},
-                        { title: '*'},
-                        { title: '/'},
+                        { title: '+' },
+                        { title: '-' },
+                        { title: '*' },
+                        { title: '/' },
                     ],
                 condition: ''
             }
